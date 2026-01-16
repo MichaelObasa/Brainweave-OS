@@ -11,14 +11,14 @@ This repo is by no means a finished product. It’s just the architecture, philo
 ## Why Am I Building This
 
 I've found that I don’t struggle with output. I do however struggle with **fragmentation**. 
-My work lives across:
-
+My work currently lives across:
 -   notes and documents
--   chats and transcripts
+-   chats
+-   YouTube and Podcast Transcripts 
 -   code and diagrams
 -   half-formed ideas and decisions
 
-Individually, these are useful. Collectively, they’re powerful — but only if they’re structured. AI made this problem obvious. Large language models are incredibly capable, but they don’t work well with messy, low-context data. And traditional signals — CVs, portfolios, titles — don’t reflect how someone actually thinks or builds.
+Individually, these are useful. Collectively, they’re powerful - but only when structured. AI made this problem obvious. LLMs are incredibly capable, but they don’t work well with messy, low-context data. And traditional signals like CVs, portfolios, titles — don’t reflect how someone actually thinks or builds.
 
 I started BrainWeave because I wanted:
 
