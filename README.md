@@ -18,7 +18,7 @@ My work currently lives across:
 -   code and diagrams
 -   half-formed ideas and decisions
 
-Individually, these are useful. Collectively, they’re powerful - but only when structured. AI made this problem obvious. LLMs are incredibly capable, but they don’t work well with messy, low-context data. And traditional signals like CVs, portfolios, titles — don’t reflect how someone actually thinks or builds.
+Individually, these are useful. Collectively, they’re powerful - but only when structured. AI made this problem obvious. LLMs are incredibly capable, but they don’t work well with messy, low-context data. And traditional signals like CVs, portfolios, titles don’t reflect how someone actually thinks or builds.
 
 I started BrainWeave because I wanted:
 
