@@ -1,8 +1,8 @@
-# Brainweave-OS
+# Katana-OS
 
-# BrainWeave: A Personal Data OS for the AI-Native Era
+# Katana OS: A Personal Data OS for the AI-Native Era
 
-BrainWeave is how I think about personal knowledge in a world where AI is always present. I built this for myself because I needed it, but I’m designing it in a way that could work for anyone who builds, thinks, and compounds their ideas over time.
+Katana OS is how I think about personal knowledge in a world where AI is always present. I built this for myself because I needed it, but I’m designing it in a way that could work for anyone who builds, thinks, and compounds their ideas over time.
 
 This repo is by no means a finished product. It’s just the architecture, philosophy and early blueprints of a **personal operating system for context**.
 
@@ -32,7 +32,7 @@ I started BrainWeave because I wanted:
 
 > **Context is the real asset.**
 
-BrainWeave is a **semantic layer** that sits between raw personal data and AI systems. Instead of asking AI to “search my files”, I want it to:
+Katana OS is a **semantic layer** that sits between raw personal data and AI systems. Instead of asking AI to “search my files”, I want it to:
 
 -   understand relationships
 -   respect boundaries
@@ -130,7 +130,7 @@ These guide every decision in BrainWeave:
 
 ## Status
 
-BrainWeave is early, unfinished, and intentional. The architecture will evolve. The implementations will deepen. The ideas will sharpen. This repo stays public because **thinking in public is part of the system**.
+Katana OS is early, unfinished, and intentional. The architecture will evolve. The implementations will deepen. The ideas will sharpen. This repo stays public because **thinking in public is part of the system**.
 
 ---
 
