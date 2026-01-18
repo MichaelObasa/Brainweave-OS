@@ -130,7 +130,7 @@ These guide every decision in BrainWeave:
 
 ## Status
 
-Katana OS is early, unfinished, and intentional. The architecture will evolve. The implementations will deepen. The ideas will sharpen. This repo stays public because **thinking in public is part of the system**.
+Brainweave OS is early, unfinished, and intentional. The architecture will evolve. The implementations will deepen. The ideas will sharpen. This repo stays public because **thinking in public is part of the system**.
 
 ---
 
