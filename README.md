@@ -2,7 +2,7 @@
 
 # Brainweave OS: A Personal Data OS for the AI-Native Era
 
-Katana OS is how I think about personal knowledge in a world where AI is always present. I built this for myself because I needed it, but I’m designing it in a way that could work for anyone who builds, thinks, and compounds their ideas over time.
+Brainweave OS is how I think about personal knowledge in a world where AI is always present. I built this for myself because I needed it, but I’m designing it in a way that could work for anyone who builds, thinks, and compounds their ideas over time.
 
 This repo is by no means a finished product. It’s just the architecture, philosophy and early blueprints of a **personal operating system for context**.
 
