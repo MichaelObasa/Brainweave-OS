@@ -32,7 +32,7 @@ I started BrainWeave because I wanted:
 
 > **Context is the real asset.**
 
-Katana OS is a **semantic layer** that sits between raw personal data and AI systems. Instead of asking AI to “search my files”, I want it to:
+Brainweave OS is a **semantic layer** that sits between raw personal data and AI systems. Instead of asking AI to “search my files”, I want it to:
 
 -   understand relationships
 -   respect boundaries
