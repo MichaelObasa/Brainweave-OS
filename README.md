@@ -1,4 +1,4 @@
-# Brainweave-OS
+# Brainweave OS
 
 # Brainweave OS: A Personal Data OS for the AI-Native Era
 
