@@ -77,13 +77,27 @@ def test_youtube_ingestion():
             print(f"  - Title: {data['metadata']['title']}")
             
             if data.get("file_save_info"):
-                print(f"  - File saved: {data['file_save_info']['filename']}")
-                # Verify file exists
-                file_path = Path("knowledge_vault") / data['file_save_info']['filename']
-                if file_path.exists():
-                    print(f"  - File verified: {file_path}")
-                else:
-                    print(f"  ⚠ Warning: File not found at {file_path}")
+                save_info = data['file_save_info']
+                print(f"  - File saved: {save_info['filename']}")
+                
+                # Verify staging file exists (should always be present)
+                if save_info.get('staged_path'):
+                    staged_path = Path(save_info['staged_path'])
+                    if staged_path.exists():
+                        print(f"  - Staging file verified: {staged_path}")
+                    else:
+                        print(f"  ⚠ Warning: Staging file not found at {staged_path}")
+                
+                # Verify vault file if copy succeeded
+                if save_info.get('saved') and save_info.get('path'):
+                    vault_path = Path(save_info['path'])
+                    if vault_path.exists():
+                        print(f"  - Vault file verified: {vault_path}")
+                    else:
+                        print(f"  ⚠ Warning: Vault file not found at {vault_path}")
+                elif not save_info.get('saved'):
+                    print(f"  - Vault copy failed (expected with sync locks): {save_info.get('error_code', 'unknown')}")
+                    print(f"  - File available in staging: {save_info.get('staged_path')}")
             
             return True
         else:
