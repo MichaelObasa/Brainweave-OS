@@ -66,7 +66,7 @@ class FileSaveInfo(BaseModel):
     skipped: bool = False  # True if file existed and overwrite=False
     staged_path: Optional[str] = None  # Staging directory path (always present if saved)
     saved: bool = True  # False if final vault copy failed
-    error_code: Optional[str] = None  # Error code if save failed (e.g., "FILE_LOCKED")
+    error_code: Optional[str] = None  ## Error code if save failed (e.g., "FILE_LOCKED")
 
 
 class IngestResponse(BaseModel):
