@@ -31,7 +31,7 @@ class MetadataSchema(BaseModel):
     @classmethod
     def validate_date(cls, v):
         """Validate ISO8601 date format if provided."""
-        if v is None:
+        if v is None: 
             return v
         try:
             datetime.fromisoformat(v.replace("Z", "+00:00"))
