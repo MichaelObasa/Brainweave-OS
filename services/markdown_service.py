@@ -1,9 +1,9 @@
 """Markdown file writing service with staging and atomic writes."""
 
 import logging
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
-import yaml
 
 from models.schemas import MetadataSchema, FileSaveInfo
 from utils.filesystem import create_windows_safe_filename, ensure_directory_exists
@@ -29,61 +29,47 @@ class MarkdownService:
     
     def _build_markdown_content(self, metadata: MetadataSchema) -> str:
         """Build markdown content from metadata."""
-        # Prepare YAML frontmatter
-        frontmatter = {
-            "title": metadata.title,
-            "source_url": metadata.source_url,
-            "source_type": metadata.source_type,
-            "date_published": metadata.date_published,
-            "host": metadata.host,
-            "guests": metadata.guests,
-            "topics": metadata.topics,
-            "tags": metadata.tags,
-        }
-        
-        # Remove null values from frontmatter for cleaner YAML
-        frontmatter = {k: v for k, v in frontmatter.items() if v is not None and v != []}
-        
-        # Build markdown content
-        lines = []
-        lines.append("---")
-        lines.append(yaml.dump(frontmatter, default_flow_style=False, allow_unicode=True, sort_keys=False).strip())
-        lines.append("---")
-        lines.append("")
-        
-        # Write summary
-        lines.append("# Summary")
-        lines.append("")
-        lines.append(metadata.summary)
-        lines.append("")
-        
-        # Write key points
-        if metadata.key_points:
-            lines.append("## Key Points")
-            lines.append("")
-            for point in metadata.key_points:
-                lines.append(f"- {point}")
-            lines.append("")
-        
-        # Write chapters if available
-        if metadata.chapters:
-            lines.append("## Chapters")
-            lines.append("")
-            for chapter in metadata.chapters:
-                lines.append(f"### {chapter.title}")
-                if chapter.timestamp:
-                    lines.append(f"*Timestamp: {chapter.timestamp}*")
-                lines.append(chapter.summary)
-                lines.append("")
-            lines.append("")
-        
-        # Write transcript
-        lines.append("## Transcript")
-        lines.append("")
-        lines.append(metadata.transcript)
-        lines.append("")
-        
+        formatted_date = self._format_date(metadata.date_published)
+        source_value = "A16z"
+        speakers = [speaker for speaker in [metadata.host] if speaker]
+        if metadata.guests:
+            speakers.extend(metadata.guests)
+        speakers_value = ", ".join(speakers) if speakers else "Unknown"
+        topics_value = ", ".join(metadata.topics) if metadata.topics else "None"
+        type_value = metadata.source_type.title() if metadata.source_type else "Unknown"
+
+        lines = [
+            f"Title: {metadata.title}",
+            f"Date: {formatted_date}",
+            f"Source: {source_value}",
+            f"Speaker(s): {speakers_value}",
+            f"Type: {type_value}",
+            f"Topics: {topics_value}",
+            "",
+            "# Summary",
+            "",
+            metadata.summary,
+            "",
+            "—----------------------",
+            "",
+            "## Transcript",
+            "",
+            metadata.transcript,
+            "",
+        ]
+
         return "\n".join(lines)
+
+    @staticmethod
+    def _format_date(date_value: Optional[str]) -> str:
+        """Format ISO8601 date string into DD-MM-YYYY."""
+        if not date_value:
+            return "Unknown"
+        try:
+            parsed_date = datetime.fromisoformat(date_value.replace("Z", "+00:00"))
+        except ValueError:
+            return "Unknown"
+        return parsed_date.strftime("%d-%m-%Y")
     
     def save_metadata(
         self,
