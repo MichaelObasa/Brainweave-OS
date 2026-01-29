@@ -1,4 +1,8 @@
-# Brainweave-OS Ingestion API
+# Brainweave-OS 
+Think of a perosnal intelligence layer 
+Like Google Drive x Cohere for B2C
+
+Ingestion API
 
 A robust YouTube ingestion pipeline that extracts transcripts, generates structured metadata using LLMs, and saves markdown files for your knowledge vault.
 
