@@ -1,250 +1,77 @@
-# Brainweave-OS 
-Think of a perosnal intelligence layer 
-Like Google Drive x Cohere for B2C
+# 🧠 Brainweave-OS
 
-Ingestion API
+**The "Personal Intelligence Layer" for the Knowledge Worker.**
+*Concept: Google Drive x Cohere—but private, local, and built for B2C scale.*
 
-A robust YouTube ingestion pipeline that extracts transcripts, generates structured metadata using LLMs, and saves markdown files for your knowledge vault.
+---
 
-## Features
+### 🔮 The Thesis
+I’m betting on a future where we need **more** personal compute and storage, not less.
 
-- **YouTube Transcript Extraction**: Handles various URL formats, auto/manual captions, multiple languages
-- **Structured Metadata Extraction**: Uses OpenAI or Gemini to extract host, guests, topics, tags, summary, and key points
-- **Markdown Storage**: Saves structured markdown files with YAML frontmatter to `knowledge_vault/`
-- **Idempotent**: Won't re-process videos unless `overwrite=true`
-- **Robust Error Handling**: Clear error codes and messages for common failure modes
-- **Windows-Safe**: Handles Windows filename restrictions and Google Drive sync
+As AI becomes the default interface for information, the competitive advantage for knowledge workers won't be "using AI"—it will be having a **Private Intelligence Layer** that owns your context. We need to capture the flood of unstructured data we consume (YouTube, podcasts, papers) and convert it into a structured, queryable asset.
 
-## Requirements
+Current solutions are fragmented. We have storage (Drive), retrieval (Cohere), and chat (ChatGPT), but no unified OS that binds them together for the power user.
 
-- Python 3.12+
-- Windows 11 (or compatible OS)
-- OpenAI API key OR Gemini API key
+**Brainweave-OS** is that binding layer. It is an ingestion engine designed to combine best-in-class inference (GPT-5 mini, DeepSeek, GLM) with reliable personal storage.
 
-## Setup
+---
 
-1. **Clone and navigate to the repository:**
-   ```bash
-   cd brainweave-os
-   ```
+### 🏗️ Architecture & Capability
+Currently, this module functions as a **High-Fidelity YouTube Ingestion Pipeline**.
+It treats video content as raw data: extracting transcripts, generating structured metadata via LLMs, and serializing it as clean Markdown in your local vault.
 
-2. **Create a virtual environment:**
-   ```bash
-   python -m venv venv
-   venv\Scripts\activate  # On Windows
-   ```
+**Key Engineering Principles:**
+* **Model Agnostic:** Designed to swap backends easily (e.g., using **DeepSeek v3.2** for reasoning or **GPT-5 mini** for cost-effective summarization).
+* **Local-First:** Data is stored in standard Markdown/YAML. You own the bytes, not a SaaS provider.
+* **Idempotency:** The pipeline is state-aware; it won't burn API credits re-processing the same video twice.
 
-3. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+---
 
-4. **Set environment variables:**
-   
-   Create a `.env` file in the project root (or set system environment variables):
-   ```bash
-   OPENAI_API_KEY=your_openai_api_key_here
-   # OR
-   GEMINI_API_KEY=your_gemini_api_key_here
-   
-   # Optional: Custom vault directories (defaults shown)
-   KNOWLEDGE_VAULT_STAGING_DIR=knowledge_vault_staging
-   KNOWLEDGE_VAULT_DIR=knowledge_vault
-   ```
-   
-   The API will default to OpenAI if both are set.
-   
-   **Vault Configuration:**
-   - `KNOWLEDGE_VAULT_STAGING_DIR`: Local staging directory (fast, reliable, NOT synced)
-   - `KNOWLEDGE_VAULT_DIR`: Final vault directory (typically Google Drive synced folder)
+## 🛠️ System Design: The "Staging" Pattern
 
-5. **Start the server:**
-   ```bash
-   uvicorn main:app --reload --host 0.0.0.0 --port 8000
-   ```
+I designed the I/O layer to handle the specific constraints of cloud-synced filesystems (Google Drive, Dropbox, OneDrive).
 
-   The API will be available at `http://localhost:8000`
+**The Problem:**
+Writing directly to a synced folder often causes **File Locking** exceptions ( `OSError: [Errno 13]`) when the sync client attempts to upload a file while Python is still writing to it.
 
-## API Endpoints
+**The Solution:**
+I implemented a **Two-Stage Write Strategy**:
+1.  **Atomic Staging:** The system *always* writes to a local `_staging` directory first. This is fast, strictly local, and prevents partial writes.
+2.  **Safe Promotion:** It then attempts to copy the artifact to the `knowledge_vault` (Google Drive).
+3.  **Failure Isolation:** If the Vault is locked, the system logs a warning but **does not crash**. The data remains safe in Staging for a later sync.
 
-### Health Check
+---
+
+## 🚀 Features
+
+* **Universal Extraction:** Handles standard URLs, Shorts, and auto-captions across multiple languages.
+* **Pluggable Intelligence:** Supports multiple provider backends to optimize for cost vs. quality:
+    * **OpenAI** (GPT-4o / GPT-5 mini)
+    * **DeepSeek** (v3.2)
+    * **Google** (Gemini 1.5 Pro / 2.0)
+    * *Experimental support for GLM-4.7 and MiniMax 2.1*
+* **Structured Enrichment:** Transforms raw text into queryable metadata:
+    * 📝 **Executive Summary** (TL;DW)
+    * 🏷️ **Semantic Tagging** (Topics, Entities, Guests)
+    * 💡 **Key Insights** (Bullet-point takeaways)
+* **Windows-Safe:** Sanitizes filenames automatically to comply with NTFS restrictions.
+
+---
+
+## ⚙️ Setup
+
+### 1. Requirements
+* Python 3.12+
+* API Key for your preferred LLM provider.
+
+### 2. Installation
 ```bash
-GET /health
-```
+git clone [https://github.com/yourusername/brainweave-os.git](https://github.com/yourusername/brainweave-os.git)
+cd brainweave-os
 
-Returns: `{"status": "ok"}`
+# Create virtual env
+python -m venv venv
+venv\Scripts\activate  # Windows
 
-### Ingest YouTube Video
-```bash
-POST /ingest/youtube
-Content-Type: application/json
-
-{
-  "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-  "provider": "openai",           # optional: "openai" | "gemini", default: "openai"
-  "language": "en",                # optional: preferred transcript language, default: "en"
-  "save_markdown": true,           # optional: save markdown file, default: true
-  "overwrite": false               # optional: overwrite existing files, default: false
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "transcript_stats": {
-    "character_count": 12345,
-    "language": "en",
-    "source": "manual",
-    "segment_count": 150
-  },
-  "metadata": {
-    "title": "Video Title",
-    "source_url": "https://www.youtube.com/watch?v=...",
-    "source_type": "youtube",
-    "date_published": "2024-01-15T10:30:00Z",
-    "host": "John Doe",
-    "guests": ["Jane Smith"],
-    "topics": ["Artificial Intelligence", "Venture Capital"],
-    "tags": ["#AI", "#VC"],
-    "summary": "3-5 paragraph executive summary...",
-    "key_points": ["Point 1", "Point 2", ...],
-    "transcript": "Full transcript text...",
-    "chapters": [...]
-  },
-  "file_save_info": {
-    "path": "knowledge_vault/2026-01-23__video-title__VIDEO_ID.md",
-    "filename": "2026-01-23__video-title__VIDEO_ID.md",
-    "skipped": false
-  }
-}
-```
-
-## Example Usage
-
-### Using curl:
-```bash
-curl -X POST "http://localhost:8000/ingest/youtube" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-    "provider": "openai",
-    "save_markdown": true
-  }'
-```
-
-### Using Python:
-```python
-import requests
-
-response = requests.post(
-    "http://localhost:8000/ingest/youtube",
-    json={
-        "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-        "provider": "openai",
-        "save_markdown": True
-    }
-)
-
-print(response.json())
-```
-
-## Error Handling
-
-The API returns structured error responses:
-
-```json
-{
-  "error_code": "TRANSCRIPTS_DISABLED",
-  "message": "This video has captions disabled. Cannot extract transcript.",
-  "details": {
-    "video_id": "dQw4w9WgXcQ"
-  }
-}
-```
-
-**Common Error Codes:**
-- `INVALID_URL`: Could not extract video ID from URL
-- `TRANSCRIPTS_DISABLED`: Video has captions disabled
-- `NO_TRANSCRIPT_FOUND`: No transcript available in requested language
-- `VIDEO_UNAVAILABLE`: Video is private, deleted, or region-restricted
-- `RATE_LIMITED`: YouTube API rate limit exceeded
-- `LLM_VALIDATION_ERROR`: LLM returned invalid JSON
-- `LLM_EXTRACTION_ERROR`: LLM API call failed
-
-## Project Structure
-
-```
-brainweave-os/
-├── main.py                 # FastAPI application
-├── models/                 # Pydantic models
-│   ├── __init__.py
-│   └── schemas.py
-├── services/               # Business logic
-│   ├── __init__.py
-│   ├── transcript_service.py
-│   ├── llm_service.py
-│   └── markdown_service.py
-├── utils/                  # Utility functions
-│   ├── __init__.py
-│   ├── youtube.py
-│   └── filesystem.py
-├── knowledge_vault/         # Output directory (created automatically)
-├── requirements.txt
-├── .gitignore
-└── README.md
-```
-
-## Markdown File Format
-
-Saved markdown files include:
-
-1. **YAML Frontmatter**: Title, URL, date, host, guests, topics, tags
-2. **Summary**: 3-5 paragraph executive summary
-3. **Key Points**: Bulleted list of main takeaways
-4. **Chapters**: Optional chapter breakdown with timestamps
-5. **Transcript**: Full transcript text
-
-Files are saved with Windows-safe filenames: `YYYY-MM-DD__slug__VIDEO_ID.md`
-
-**Staging + Vault Architecture:**
-- Files are **always** written to staging first (`knowledge_vault_staging/`) - this is fast and reliable
-- Then copied to the final vault (`knowledge_vault/`) - may fail due to Google Drive sync locks
-- If vault copy fails, the file remains in staging and the API still returns success with metadata
-- This ensures ingestion never fails due to sync issues - you always get your data
-
-**Response includes:**
-- `staged_path`: Always present if file was saved (staging location)
-- `path`: Final vault path (may be null if copy failed)
-- `saved`: Boolean indicating if copy to vault succeeded
-- `error_code`: Error code if vault copy failed (e.g., "FILE_LOCKED")
-
-## Testing
-
-Run the smoke test script:
-```bash
-python smoke_test.py
-```
-
-Or test manually:
-```bash
-# Health check
-curl http://localhost:8000/health
-
-# Ingest a video
-curl -X POST http://localhost:8000/ingest/youtube \
-  -H "Content-Type: application/json" \
-  -d '{"url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"}'
-```
-
-## Notes
-
-- Long transcripts are automatically chunked for LLM processing
-- The API is idempotent: ingesting the same video twice won't duplicate work unless `overwrite=true`
-- Markdown files are saved with LF line endings for consistency
-- Google Drive Desktop sync is supported (handles file locks gracefully)
-- Windows filename restrictions are automatically handled
-
-## License
-
-See LICENSE file.
+# Install dependencies
+pip install -r requirements.txt
