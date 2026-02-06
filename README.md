@@ -46,10 +46,10 @@ I implemented a **Two-Stage Write Strategy**:
 
 * **Universal Extraction:** Handles standard URLs, Shorts, and auto-captions across multiple languages.
 * **Pluggable Intelligence:** Supports multiple provider backends to optimize for cost vs. quality:
-    * **OpenAI** (GPT-4o / GPT-5 mini)
+    * **OpenAI** (GPT-5.2 / GPT-5 mini)
     * **DeepSeek** (v3.2)
-    * **Google** (Gemini 1.5 Pro / 2.0)
-    * *Experimental support for GLM-4.7 and MiniMax 2.1*
+    * **Google** (Gemini 3 Pro / 3 Flash)
+    * *Experimental support for high performing agentic open source models like GLM-4.7 and MiniMax 2.1*
 * **Structured Enrichment:** Transforms raw text into queryable metadata:
     * 📝 **Executive Summary** (TL;DW)
     * 🏷️ **Semantic Tagging** (Topics, Entities, Guests)
