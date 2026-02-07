@@ -82,3 +82,27 @@ class ErrorResponse(BaseModel):
     error_code: str
     message: str
     details: Optional[dict] = None
+
+class UniversalMetadata(BaseModel):
+    """
+    The 'One Ring' schema to rule them all. 
+    Standardizes inputs from YouTube, receipts, or screenshots.
+    """
+    title: str = Field(..., description="A clean, searchable title.")
+    source_type: Literal["youtube", "linkedin_post", "receipt", "article", "tweet", "chart"]
+    author: Optional[str] = Field(None, description="The creator, host, or merchant.")
+    
+    topics: List[str] = Field(default_factory=list, description="Broad buckets: 'Finance', 'Crypto'.")
+    tags: List[str] = Field(default_factory=list, description="Granular hooks: '#BTC', '#Tax'.")
+    summary: str = Field(..., description="A 3-sentence summary.")
+    date_published: Optional[str] = None
+    suggested_folder: Literal["_Inbox", "Finance", "Research", "Brainweave-OS"] = "_Inbox"
+
+    @field_validator("date_published")
+    @classmethod
+    def validate_date(cls, v):
+        if v is None: return v
+        try:
+            return v.replace("Z", "+00:00")
+        except:
+            return None
