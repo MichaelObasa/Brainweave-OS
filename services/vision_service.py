@@ -29,7 +29,7 @@ class VisionService:
         
         # CHANGED: Using Google's Gemini 2.0 Flash (Free Tier via OpenRouter)
         # It is faster and currently free.
-        model_id = "google/gemini-2.0-flash-exp:free"
+        model_id = "google/gemini-2.0-pro-exp-02-05:free"
         
         try:
             response = self.client.beta.chat.completions.parse(
