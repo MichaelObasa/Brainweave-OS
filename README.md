@@ -66,7 +66,7 @@ I implemented a **Two-Stage Write Strategy**:
 
 ### 2. Installation
 ```bash
-git clone [https://github.com/yourusername/brainweave-os.git](https://github.com/yourusername/brainweave-os.git)
+git clone [https://github.com/michaelobasa/brainweave-os.git](https://github.com/michaelobasa/brainweave-os.git)
 cd brainweave-os
 
 # Create virtual env
