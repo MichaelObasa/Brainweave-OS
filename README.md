@@ -52,7 +52,7 @@ I implemented a **Two-Stage Write Strategy**:
     * *Experimental support for high performing agentic open source models like GLM-4.7 and MiniMax 2.1*
 * **Structured Enrichment:** Transforms raw text into queryable metadata:
     * **Executive Summary** (TL;DW)
-    * 🏷️ **Semantic Tagging** (Topics, Entities, Guests)
+    * **Semantic Tagging** (Topics, Entities, Guests)
     * 💡 **Key Insights** (Bullet-point takeaways)
 * **Windows-Safe:** Sanitizes filenames automatically to comply with NTFS restrictions.
 
