@@ -12,7 +12,7 @@ from youtube_transcript_api._errors import (
     TranscriptsDisabled,
     NoTranscriptFound,
     VideoUnavailable,
-    TooManyRequests,
+    
     YouTubeRequestFailed,
 )
 
@@ -28,6 +28,12 @@ from services.transcript_service import TranscriptService
 from services.llm_service import LLMService
 from services.markdown_service import MarkdownService
 from utils.youtube import extract_video_id
+# --- NEW IMPORTS FOR VISION ---
+from fastapi import UploadFile, File
+from services.vision_service import VisionService
+from services.router import route_file
+import shutil
+import os
 
 # Request ID context variable
 request_id_var: ContextVar[str] = ContextVar("request_id", default="unknown")
@@ -269,3 +275,38 @@ async def ingest_youtube(request: IngestRequest):
                 details={"error": str(e)}
             ).model_dump()
         )
+
+# --- NEW ENDPOINT FOR VISION ---
+@app.post("/ingest/upload")
+async def upload_file(file: UploadFile = File(...)):
+    """
+    Magic Upload Endpoint.
+    1. Saves upload to temp staging.
+    2. Runs GPT-4o Vision.
+    3. Auto-routes to correct folder.
+    """
+    # 1. Save to temp staging
+    os.makedirs("staging", exist_ok=True)
+    temp_path = f"staging/{file.filename}"
+    
+    with open(temp_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
+    # 2. Analyze & Route
+    try:
+        vision = VisionService()
+        metadata = vision.analyze_image(temp_path)
+        
+        # UPDATE THIS PATH to your actual vault path if needed
+        vault_path = r"C:\Users\Michael\OneDrive\Documents\brainweave-os\Knowledge_Vault" 
+        
+        final_path = route_file(temp_path, metadata, vault_path)
+        
+        return {
+            "status": "success", 
+            "file": final_path, 
+            "meta": metadata
+        }
+    except Exception as e:
+        logger.error(f"Upload failed: {e}")
+        return {"error": str(e)}
