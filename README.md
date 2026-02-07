@@ -53,7 +53,7 @@ I implemented a **Two-Stage Write Strategy**:
 * **Structured Enrichment:** Transforms raw text into queryable metadata:
     * **Executive Summary** (TL;DW)
     * **Semantic Tagging** (Topics, Entities, Guests)
-    * 💡 **Key Insights** (Bullet-point takeaways)
+    * **Key Insights** (Bullet-point takeaways)
 * **Windows-Safe:** Sanitizes filenames automatically to comply with NTFS restrictions.
 
 ---
