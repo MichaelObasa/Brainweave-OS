@@ -1,17 +1,21 @@
 import shutil
 import os
+import pathlib
 from datetime import datetime
 from models.schemas import UniversalMetadata
 
 def route_file(file_path: str, metadata: UniversalMetadata, base_vault_path: str):
     """
-    Routes files into the 4 Pillars of Brainweave OS:
-    1. 01 Personal (Finance, CV, Admin)
-    2. 02 Work (Volant Media, Clients)
-    3. 03 Founder Mode (Indexr, Startup Ideas)
-    4. 04 Library (Everything else: Podcasts, YouTube, LinkedIn, Research)
+    Routes files into the 4 Pillars of Brainweave OS.
+    Automatically detects file extension (.md, .jpg, .png) to prevent corruption.
     """
     
+    # 1. Detect Original Extension (Fixes the .jpg bug)
+    extension = pathlib.Path(file_path).suffix
+    if not extension:
+        # Fallback defaults
+        extension = ".md" if metadata.source_type == "youtube" else ".jpg"
+
     # --- LOGIC MAP ---
     
     # 1. FOUNDER MODE (Highest Priority)
@@ -32,7 +36,6 @@ def route_file(file_path: str, metadata: UniversalMetadata, base_vault_path: str
 
     # 4. LIBRARY (The Catch-All)
     else:
-        # We organize Library by Source Type first
         if metadata.source_type == "youtube":
             folder_name = "YouTube"
         elif metadata.source_type == "linkedin_post":
@@ -42,7 +45,6 @@ def route_file(file_path: str, metadata: UniversalMetadata, base_vault_path: str
         else:
             folder_name = "General Knowledge"
             
-        # Add Author subfolder if known (e.g., 04 Library/YouTube/A16z)
         if metadata.author:
             target_dir = os.path.join(base_vault_path, "04 Library", folder_name, metadata.author)
         else:
@@ -51,11 +53,11 @@ def route_file(file_path: str, metadata: UniversalMetadata, base_vault_path: str
     # --- EXECUTION ---
     os.makedirs(target_dir, exist_ok=True)
     
-    # Sanitize filename
+    # Create clean filename
     safe_title = "".join([c for c in metadata.title if c.isalnum() or c in " -_"]).strip()
     date_prefix = metadata.date_published or datetime.now().strftime("%Y-%m-%d")
     
-    new_filename = f"{date_prefix} - {safe_title}.jpg"
+    new_filename = f"{date_prefix} - {safe_title}{extension}"
     final_path = os.path.join(target_dir, new_filename)
 
     shutil.move(file_path, final_path)
