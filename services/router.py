@@ -45,8 +45,14 @@ def route_file(file_path: str, metadata: UniversalMetadata, base_vault_path: str
         else:
             folder_name = "General Knowledge"
             
-        if metadata.author:
-            target_dir = os.path.join(base_vault_path, "04 Library", folder_name, metadata.author)
+        # FIX: Check for 'host' instead of 'author', and default to 'Uncategorized' if missing
+        # We use getattr() to be extra safe against missing fields
+        author_name = getattr(metadata, 'host', None) or getattr(metadata, 'author', None)
+        
+        if author_name:
+            # Clean the author name to be folder-safe
+            safe_author = "".join([c for c in author_name if c.isalnum() or c in " -_"]).strip()
+            target_dir = os.path.join(base_vault_path, "04 Library", folder_name, safe_author)
         else:
             target_dir = os.path.join(base_vault_path, "04 Library", folder_name)
 
