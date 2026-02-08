@@ -34,11 +34,24 @@ with tab1:
                 
                 if res.status_code == 200:
                     data = res.json()
-                    st.success(f"✅ Saved!")
-                    st.info(f"📂 **Location:** {data.get('file_save_info', {}).get('filename', 'Unknown')}")
+                    st.success(f"✅ Analysis Complete!")
                     
-                    with st.expander("View Extracted Metadata"):
-                        st.json(data['metadata'])
+                    # --- SAFETY FIX STARTS HERE ---
+                    file_info = data.get('file_save_info')
+                    
+                    if file_info:
+                        if file_info.get('saved') is False:
+                            # START DEBUGGING: Show the actual error from the server
+                            st.error(f"❌ Save Failed: {file_info.get('path')}")
+                        else:
+                            filename = file_info.get('filename', 'Unknown File')
+                            st.info(f"📂 **Saved to:** `{filename}`")
+                    else:
+                        st.warning("⚠️ Metadata extracted, but file info is missing completely.")
+                    # --- SAFETY FIX ENDS HERE ---
+                    
+                    with st.expander("View Extracted Metadata", expanded=True):
+                        st.json(data.get('metadata', {}))
                 else:
                     st.error(f"Error {res.status_code}: {res.text}")
             except Exception as e:
@@ -53,7 +66,7 @@ with tab2:
         st.image(uploaded_file, caption="Preview", width=300)
         
         if st.button("Analyze & Route", type="primary"):
-            with st.spinner("👁️ GPT-4o Vision is analyzing..."):
+            with st.spinner("👁️ AI Vision is analyzing..."):
                 try:
                     files = {"file": (uploaded_file.name, uploaded_file, uploaded_file.type)}
                     res = requests.post(f"{API_URL}/ingest/upload", files=files)
@@ -67,7 +80,7 @@ with tab2:
                         folder = os.path.dirname(final_path)
                         st.info(f"📂 **Moved to:** `{folder}`")
                         
-                        st.json(data['meta'])
+                        st.json(data.get('meta', {}))
                     else:
                         st.error(f"Error: {res.text}")
                 except Exception as e:

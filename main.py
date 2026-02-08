@@ -6,13 +6,12 @@ import uuid
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from pathlib import Path
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.responses import JSONResponse
 from youtube_transcript_api._errors import (
     TranscriptsDisabled,
     NoTranscriptFound,
     VideoUnavailable,
-    
     YouTubeRequestFailed,
 )
 
@@ -28,12 +27,15 @@ from services.transcript_service import TranscriptService
 from services.llm_service import LLMService
 from services.markdown_service import MarkdownService
 from utils.youtube import extract_video_id
-# --- NEW IMPORTS FOR VISION ---
-from fastapi import UploadFile, File
 from services.vision_service import VisionService
 from services.router import route_file
 import shutil
 import os
+
+# --- CONFIGURATION ---
+# YOUR GOOGLE DRIVE PATH (The "Vault")
+# We use a raw string (r"...") to handle the backslashes and emojis correctly
+VAULT_PATH = r"G:\My Drive\Brainweave OS ⚔️"
 
 # Request ID context variable
 request_id_var: ContextVar[str] = ContextVar("request_id", default="unknown")
@@ -64,13 +66,18 @@ for handler in logging.root.handlers:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup/shutdown."""
-    # Ensure directories exist
-    from config import KNOWLEDGE_VAULT_STAGING_DIR, KNOWLEDGE_VAULT_DIR
-    KNOWLEDGE_VAULT_STAGING_DIR.mkdir(parents=True, exist_ok=True)
-    KNOWLEDGE_VAULT_DIR.mkdir(parents=True, exist_ok=True)
+    # Ensure local staging exists
+    os.makedirs("staging", exist_ok=True)
+    
     logger.info("Brainweave-OS Ingestion API starting up")
-    logger.info(f"Staging directory: {KNOWLEDGE_VAULT_STAGING_DIR}")
-    logger.info(f"Vault directory: {KNOWLEDGE_VAULT_DIR}")
+    logger.info(f"Vault Path Configured: {VAULT_PATH}")
+    
+    # Verify we can see the Google Drive
+    if os.path.exists(VAULT_PATH):
+        logger.info("✅ Connection to Google Drive confirmed.")
+    else:
+        logger.warning(f"⚠️ WARNING: Could not find Google Drive at {VAULT_PATH}. Check your path!")
+        
     yield
     logger.info("Brainweave-OS Ingestion API shutting down")
 
@@ -94,29 +101,21 @@ async def add_request_id(request: Request, call_next):
     return response
 
 
-@app.get("/health")
-async def health_check():
-    """Health check endpoint."""
-    return {"status": "ok"}
-
-
 @app.get("/")
 async def home():
     """Root endpoint."""
     return {
         "system": "Brainweave OS",
         "status": "Online",
-        "mode": "Ingestion Ready",
-        "version": "1.0.0"
+        "vault_connection": "Active" if os.path.exists(VAULT_PATH) else "Disconnected",
+        "vault_path": VAULT_PATH
     }
 
 
 @app.post("/ingest/youtube", response_model=IngestResponse)
 async def ingest_youtube(request: IngestRequest):
     """
-    Ingest YouTube video: extract transcript, generate metadata, save markdown.
-    
-    Returns structured JSON with transcript stats, metadata, and file save info.
+    Ingest YouTube video: extract transcript, generate metadata, save markdown to Google Drive.
     """
     logger.info(f"Processing ingestion request for URL: {request.url}")
     
@@ -124,137 +123,68 @@ async def ingest_youtube(request: IngestRequest):
         # Extract video ID
         try:
             video_id = extract_video_id(request.url)
-            logger.info(f"Extracted video ID: {video_id}")
         except ValueError as e:
-            logger.error(f"Invalid YouTube URL: {request.url} - {e}")
-            raise HTTPException(
-                status_code=400,
-                detail=ErrorResponse(
-                    error_code="INVALID_URL",
-                    message=f"Could not extract video ID from URL: {request.url}",
-                    details={"url": request.url, "error": str(e)}
-                ).model_dump()
-            )
+            raise HTTPException(status_code=400, detail=str(e))
         
         # Extract transcript
-        try:
-            transcript_service = TranscriptService()
-            transcript_text, transcript_stats = await transcript_service.get_transcript(
-                video_id=video_id,
-                language=request.language
-            )
-            logger.info(f"Extracted transcript: {transcript_stats.character_count} characters")
-        except TranscriptsDisabled:
-            raise HTTPException(
-                status_code=404,
-                detail=ErrorResponse(
-                    error_code="TRANSCRIPTS_DISABLED",
-                    message="This video has captions disabled. Cannot extract transcript.",
-                    details={"video_id": video_id}
-                ).model_dump()
-            )
-        except NoTranscriptFound:
-            raise HTTPException(
-                status_code=404,
-                detail=ErrorResponse(
-                    error_code="NO_TRANSCRIPT_FOUND",
-                    message=f"No transcript found for this video in language '{request.language}'",
-                    details={"video_id": video_id, "language": request.language}
-                ).model_dump()
-            )
-        except VideoUnavailable as e:
-            raise HTTPException(
-                status_code=404,
-                detail=ErrorResponse(
-                    error_code="VIDEO_UNAVAILABLE",
-                    message="Video is unavailable (may be private, deleted, or region-restricted)",
-                    details={"video_id": video_id, "error": str(e)}
-                ).model_dump()
-            )
-        except TooManyRequests:
-            raise HTTPException(
-                status_code=429,
-                detail=ErrorResponse(
-                    error_code="RATE_LIMITED",
-                    message="YouTube API rate limit exceeded. Please try again later.",
-                    details={"video_id": video_id}
-                ).model_dump()
-            )
-        except YouTubeRequestFailed as e:
-            raise HTTPException(
-                status_code=502,
-                detail=ErrorResponse(
-                    error_code="YOUTUBE_API_ERROR",
-                    message="YouTube API request failed",
-                    details={"video_id": video_id, "error": str(e)}
-                ).model_dump()
-            )
-        except Exception as e:
-            logger.error(f"Unexpected error extracting transcript: {e}", exc_info=True)
-            raise HTTPException(
-                status_code=500,
-                detail=ErrorResponse(
-                    error_code="TRANSCRIPT_EXTRACTION_ERROR",
-                    message="Failed to extract transcript",
-                    details={"video_id": video_id, "error": str(e)}
-                ).model_dump()
-            )
+        transcript_service = TranscriptService()
+        transcript_text, transcript_stats = await transcript_service.get_transcript(
+            video_id=video_id,
+            language=request.language
+        )
         
         # Extract metadata using LLM
-        try:
-            llm_service = LLMService(provider=request.provider)
-            metadata = await asyncio.to_thread(
-                llm_service.extract_metadata,
-                transcript_text,
-                request.url
-            )
-            logger.info(f"Extracted metadata: title='{metadata.title}'")
-        except ValueError as e:
-            # LLM validation error
-            logger.error(f"LLM validation error: {e}")
-            raise HTTPException(
-                status_code=502,
-                detail=ErrorResponse(
-                    error_code="LLM_VALIDATION_ERROR",
-                    message="LLM returned invalid or malformed output",
-                    details={"error": str(e)}
-                ).model_dump()
-            )
-        except Exception as e:
-            logger.error(f"LLM extraction error: {e}", exc_info=True)
-            raise HTTPException(
-                status_code=502,
-                detail=ErrorResponse(
-                    error_code="LLM_EXTRACTION_ERROR",
-                    message="Failed to extract metadata from transcript",
-                    details={"error": str(e), "provider": request.provider}
-                ).model_dump()
-            )
+        llm_service = LLMService(provider=request.provider)
+        metadata = await asyncio.to_thread(
+            llm_service.extract_metadata,
+            transcript_text,
+            request.url
+        )
         
-        # Save markdown file if requested
-        # This is best-effort: staging always succeeds, vault copy may fail
+        # Save markdown file
         file_save_info = None
         if request.save_markdown:
+            # We override the default markdown service to use our Router logic
+            # so it goes to the correct "04 Library" folder in Google Drive
             try:
-                markdown_service = MarkdownService()
-                file_save_info = markdown_service.save_metadata(
-                    metadata,
-                    overwrite=request.overwrite
+                # Create a temporary file first
+                safe_title = "".join([c for c in metadata.title if c.isalnum() or c in " -_"]).strip()
+                temp_filename = f"temp_{safe_title}.md"
+                temp_path = os.path.join("staging", temp_filename)
+                
+                # Write content to temp file
+                from services.markdown_service import MarkdownService
+                md_service = MarkdownService()
+                content = md_service._generate_markdown_content(metadata)
+                
+                with open(temp_path, "w", encoding="utf-8") as f:
+                    f.write(content)
+                
+                # ROUTE IT to Google Drive
+                final_path = route_file(temp_path, metadata, VAULT_PATH)
+                
+                # Create the response object manually since we bypassed the service's save method
+                from models.schemas import FileSaveInfo
+                file_save_info = FileSaveInfo(
+                    filename=os.path.basename(final_path),
+                    saved=True,
+                    path=final_path
                 )
-                if file_save_info.saved:
-                    logger.info(f"Markdown file saved to vault: {file_save_info.filename}")
-                else:
-                    logger.warning(
-                        f"Markdown file saved to staging only (vault copy failed): "
-                        f"{file_save_info.filename} - {file_save_info.error_code}"
-                    )
+                logger.info(f"✅ Saved to Google Drive: {final_path}")
+                
             except Exception as e:
-                logger.error(f"Failed to save markdown file even to staging: {e}", exc_info=True)
-                # This is a real failure - staging should always work
-                # But we still return success with metadata, just no file_save_info
-                file_save_info = None
+                error_msg = f"Failed to save to Drive: {str(e)}"
+                logger.error(error_msg)
+                
+                # IMPORTANT: Return the error details so Streamlit can see them
+                from models.schemas import FileSaveInfo
+                file_save_info = FileSaveInfo(
+                    filename="ERROR_DURING_SAVE",
+                    saved=False,
+                    # We hijack the 'path' field to send the error message back to UI
+                    path=error_msg
+                )
         
-        # Return response
         return IngestResponse(
             success=True,
             transcript_stats=transcript_stats,
@@ -262,28 +192,18 @@ async def ingest_youtube(request: IngestRequest):
             file_save_info=file_save_info
         )
     
-    except HTTPException:
-        # Re-raise HTTP exceptions
-        raise
     except Exception as e:
-        logger.error(f"Unexpected error in ingestion endpoint: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail=ErrorResponse(
-                error_code="INTERNAL_ERROR",
-                message="An unexpected error occurred",
-                details={"error": str(e)}
-            ).model_dump()
-        )
+        logger.error(f"Error in YouTube ingestion: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-# --- NEW ENDPOINT FOR VISION ---
+
 @app.post("/ingest/upload")
 async def upload_file(file: UploadFile = File(...)):
     """
     Magic Upload Endpoint.
     1. Saves upload to temp staging.
-    2. Runs GPT-4o Vision.
-    3. Auto-routes to correct folder.
+    2. Runs Vision Analysis.
+    3. Auto-routes to Google Drive.
     """
     # 1. Save to temp staging
     os.makedirs("staging", exist_ok=True)
@@ -297,10 +217,8 @@ async def upload_file(file: UploadFile = File(...)):
         vision = VisionService()
         metadata = vision.analyze_image(temp_path)
         
-        # UPDATE THIS PATH to your actual vault path if needed
-        vault_path = r"C:\Users\Michael\OneDrive\Documents\brainweave-os\Knowledge_Vault" 
-        
-        final_path = route_file(temp_path, metadata, vault_path)
+        # 3. Route to Google Drive
+        final_path = route_file(temp_path, metadata, VAULT_PATH)
         
         return {
             "status": "success", 
