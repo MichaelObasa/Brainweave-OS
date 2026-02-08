@@ -141,29 +141,45 @@ async def ingest_youtube(request: IngestRequest):
             request.url
         )
         
-        # Save markdown file
+        # Save markdown file if requested
         file_save_info = None
         if request.save_markdown:
-            # We override the default markdown service to use our Router logic
-            # so it goes to the correct "04 Library" folder in Google Drive
             try:
-                # Create a temporary file first
+                # 1. Create a clean filename
                 safe_title = "".join([c for c in metadata.title if c.isalnum() or c in " -_"]).strip()
                 temp_filename = f"temp_{safe_title}.md"
                 temp_path = os.path.join("staging", temp_filename)
                 
-                # Write content to temp file
-                from services.markdown_service import MarkdownService
-                md_service = MarkdownService()
-                content = md_service._generate_markdown_content(metadata)
-                
+                # 2. Generate Markdown Content Manually (Reliable)
+                content = f"""# {metadata.title}
+
+**Source:** {metadata.source_url}
+**Date:** {metadata.date_published or 'Unknown'}
+**Host:** {metadata.host or 'Unknown'}
+**Guests:** {', '.join(metadata.guests) if metadata.guests else 'None'}
+
+## Summary
+{metadata.summary}
+
+## Key Points
+"""
+                for point in metadata.key_points:
+                    content += f"- {point}\n"
+
+                content += f"\n## Topics\n"
+                for topic in metadata.topics:
+                    content += f"- {topic}\n"
+                    
+                content += f"\n## Transcript\n{transcript_text}\n"
+
+                # 3. Write to Staging
                 with open(temp_path, "w", encoding="utf-8") as f:
                     f.write(content)
                 
-                # ROUTE IT to Google Drive
+                # 4. Route to Google Drive
                 final_path = route_file(temp_path, metadata, VAULT_PATH)
                 
-                # Create the response object manually since we bypassed the service's save method
+                # 5. Success Object
                 from models.schemas import FileSaveInfo
                 file_save_info = FileSaveInfo(
                     filename=os.path.basename(final_path),
@@ -176,13 +192,12 @@ async def ingest_youtube(request: IngestRequest):
                 error_msg = f"Failed to save to Drive: {str(e)}"
                 logger.error(error_msg)
                 
-                # IMPORTANT: Return the error details so Streamlit can see them
+                # Return error to UI
                 from models.schemas import FileSaveInfo
                 file_save_info = FileSaveInfo(
                     filename="ERROR_DURING_SAVE",
                     saved=False,
-                    # We hijack the 'path' field to send the error message back to UI
-                    path=error_msg
+                    path=error_msg 
                 )
         
         return IngestResponse(
