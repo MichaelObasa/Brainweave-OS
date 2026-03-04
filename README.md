@@ -1,6 +1,6 @@
 # 🧠 Brainweave-OS
 
-**The "Personal Intelligence Layer" for the Knowledge Worker.**
+**The "Personal Intelligence Layer" for the Knowledge Worker.** 
 *Concept: Google Drive x Cohere - but private, local, and built for B2C scale.*
 
 --- 
