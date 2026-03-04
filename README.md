@@ -3,7 +3,7 @@
 **The "Personal Intelligence Layer" for the Knowledge Worker.**
 *Concept: Google Drive x Cohere - but private, local, and built for B2C scale.*
 
----
+--- 
 
 ### 🔮 The Thesis
 I’m betting on a future where we need **more** personal compute and storage, not less.
