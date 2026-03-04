@@ -5,7 +5,7 @@
 
 --- 
 
-### 🔮 The Thesis
+### 🔮 The Thesis 
 I’m betting on a future where we need **more** personal compute and storage, not less.
 
 As AI becomes the default interface for information, the competitive advantage for knowledge workers won't be "using AI" - it will be having a **Private Intelligence Layer** that owns your context. We need to capture the flood of unstructured data we consume (YouTube, podcasts, papers) and convert it into a structured, queryable asset.
